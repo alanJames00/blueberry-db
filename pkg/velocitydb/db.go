@@ -1,11 +1,15 @@
 package velocitydb
 
-import "sync"
+import (
+	"sync"
+)
 
 var Handlers = map[string]func([]Value) Value{
 	"PING": ping,
 	"SET": set,
 	"GET": get,
+	"HSET": hset,
+	"HGET": hget,
 }
 
 // PING Command
@@ -95,11 +99,11 @@ func hget(args []Value) Value {
 	HSETsMu.RLock();
 	value, ok := HSETs[hash][key];
 	HSETsMu.RUnlock();
-
+	
 	// null check
 	if !ok {
 		return Value{typ: "null"};
 	}
 
-	return Value{ typ: "bulk", str: value };
+	return Value{typ: "bulk", bulk: value};
 }
