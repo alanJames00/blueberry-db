@@ -1,0 +1,6 @@
+[server]
+port=":6379"
+
+[persistence]
+enabled=true
+file_path="./database.aof"
