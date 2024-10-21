@@ -11,6 +11,7 @@ type Config struct {
 	ServerPort string;
 	AofEnabled bool;
 	AofFilePath string;
+	LogLevel string; // info, debug, error
 }
 
 func LoadConfig() *Config {
@@ -31,6 +32,7 @@ func LoadConfig() *Config {
 		ServerPort: viper.GetString("server.port"),	
 		AofEnabled: viper.GetBool("persistence.enabled"),
 		AofFilePath: viper.GetString("persistence.file_path"),
+		LogLevel: viper.GetString("logging.level"),
 	}
 	
 	return config;

@@ -3,10 +3,11 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net"
+	"os"
 	"strings"
 	"velocitydb/internal/config"
+	"velocitydb/internal/logger"
 	"velocitydb/pkg/velocitydb"
 )
 
@@ -14,7 +15,9 @@ func main() {
 	// load the configuration
 	cfg := config.LoadConfig();
 
-	fmt.Println("server listening on port", cfg.ServerPort);
+	// setup logging
+	logger.InitLogger(cfg.LogLevel);
+
 
 	// setup aof
 	aof, err := velocitydb.NewAof(cfg.AofFilePath);
@@ -42,8 +45,13 @@ func main() {
 	// listen on the port
 	ln, err := net.Listen("tcp", cfg.ServerPort);
 	if err != nil {
-		log.Fatalf("error starting server: %v", err);
+		logger.Error("error starting server: " + err.Error())
+		os.Exit(1);
 	}
+	defer ln.Close();
+
+	logger.Info("velocitydb started on port" + cfg.ServerPort);
+
 
 	// accept and handle connections
 	conn, err := ln.Accept();
