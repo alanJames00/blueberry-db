@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"velocitydb/internal/logger"
 )
 
 const (
@@ -148,7 +149,7 @@ func (r *Resp) Read() (Value, error) {
 	case BULK:
 		return r.readBulk();
 	default:
-		fmt.Printf("Unknown type: %v", string(_type))
+		logger.Error(fmt.Sprintf("Error Unknown type: %v", string(_type)))
 		return Value{}, nil;
 	}
 }

@@ -1,8 +1,10 @@
 package velocitydb
 
 import (
+	"fmt"
 	"strings"
 	"sync"
+	"velocitydb/internal/logger"
 )
 
 var Handlers = map[string]func([]Value) Value{
@@ -12,34 +14,44 @@ var Handlers = map[string]func([]Value) Value{
 	"HSET":   hset,
 	"HGET":   hget,
 	"CONFIG": config,
-	"INFO": info,
+	"INFO":   info,
 }
 
 // PING Command
 func ping(args []Value) Value {
 	if len(args) == 0 {
-		return Value{typ: "string", str: "PONG"}
+		// debug
+		logger.Debug("command recieved: PING");
+
+		return Value{typ: "string", str: "PONG"};
+
 	}
 
-	return Value{typ: "string", str: args[0].bulk}
+	// debug
+	logger.Debug(fmt.Sprintf("command executed: PING %s", args[0].bulk));
+
+	return Value{typ: "string", str: args[0].bulk};
 }
 
 // SET Command
-var SETs = map[string]string{}
-var SETsMu = sync.RWMutex{}
+var SETs = map[string]string{};
+var SETsMu = sync.RWMutex{};
 
 func set(args []Value) Value {
 	if len(args) != 2 {
-		return Value{typ: "error", str: "ERR wrong number of arguments for 'set' command"}
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'set' command"};
 	}
 
-	key := args[0].bulk
-	value := args[1].bulk
+	key := args[0].bulk;
+	value := args[1].bulk;
 
 	// acquire writers lock and write then Unlock
 	SETsMu.Lock()
 	SETs[key] = value
 	SETsMu.Unlock()
+
+	// debug 
+	logger.Debug(fmt.Sprintf("command executed: SET %s %s", args[0].bulk, args[1].bulk));
 
 	return Value{typ: "string", str: "OK"}
 }
@@ -61,6 +73,9 @@ func get(args []Value) Value {
 	if !ok {
 		return Value{typ: "null"}
 	}
+
+	// debug
+	logger.Debug(fmt.Sprintf("command executed: GET %s", value));
 
 	return Value{typ: "bulk", bulk: value}
 }
@@ -86,6 +101,9 @@ func hset(args []Value) Value {
 	HSETs[hash][key] = value
 	HSETsMu.Unlock()
 
+	// debug
+	logger.Debug(fmt.Sprintf("command executed: HSET %s %s %s", hash, key, value));
+
 	return Value{typ: "string", str: "OK"}
 }
 
@@ -108,6 +126,9 @@ func hget(args []Value) Value {
 		return Value{typ: "null"}
 	}
 
+	// debug
+	logger.Debug(fmt.Sprintf("command executed: HGET %s %s", hash, key));
+
 	return Value{typ: "bulk", bulk: value}
 }
 
@@ -119,6 +140,9 @@ func config(args []Value) Value {
 
 	if len(args) > 1 && strings.ToUpper(args[0].bulk) == "GET" {
 		key := strings.ToLower(args[1].bulk)
+
+		// debug
+		logger.Debug(fmt.Sprintf("command executed: CONFIG GET %s", key));
 
 		// simulate basic config responses
 		switch key {
@@ -142,6 +166,9 @@ func config(args []Value) Value {
 			return Value{typ: "array", array: []Value{}}
 		}
 	}
+	
+	// debug
+	logger.Error("commmand errored: unsupported CONFIG command");
 
 	// config command is not recognized
 	return Value{typ: "error", str: "ERR unsupported CONFIG command"}
@@ -167,6 +194,10 @@ used_cpu_sys: 0.00
 used_cpu_user: 0.00
 # Keyspace
 db0:keys=1,expires=0,avg_ttl=0
-`
-	return Value{ typ: "bulk", bulk: infoResponse };
+` 
+
+	// debug
+	logger.Debug("commmand executed: INFO");
+
+	return Value{typ: "bulk", bulk: infoResponse}
 }
