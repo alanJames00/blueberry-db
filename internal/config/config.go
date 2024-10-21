@@ -8,7 +8,9 @@ import (
 )
 
 type Config struct {
-	ServerPort string
+	ServerPort string;
+	AofEnabled bool;
+	AofFilePath string;
 }
 
 func LoadConfig() *Config {
@@ -27,6 +29,8 @@ func LoadConfig() *Config {
 	// create and populate the config struct
 	config := &Config{
 		ServerPort: viper.GetString("server.port"),	
+		AofEnabled: viper.GetBool("persistence.enabled"),
+		AofFilePath: viper.GetString("persistence.file_path"),
 	}
 	
 	return config;

@@ -22,6 +22,7 @@ type Value struct {
 	num int;
 	bulk string;
 	array []Value;
+	expiresAt int64; // UNIX timestamp of expiration time (0 means no expiration)
 }
 
 type Resp struct {
@@ -32,6 +33,18 @@ func NewResp(rd io.Reader) *Resp {
 	return &Resp{
 		reader: bufio.NewReader(rd),	
 	}
+}
+
+func (v *Value) GetType() string {
+	return v.typ;
+}
+
+func (v *Value) GetArray() []Value {
+	return v.array;
+}
+
+func (v *Value) GetBulk() string {
+	return v.bulk;
 }
 
 func (r *Resp) readLine() (line []byte, n int, err error) {
@@ -160,6 +173,7 @@ func NewValue(typ string, str string, num int, bulk string, array []Value) *Valu
 		array: array,
 	}
 }
+
 
 func (w* Writer) Write(v Value) error {
 	var bytes = v.Marshal();
