@@ -12,6 +12,7 @@ type Config struct {
 	AofEnabled bool;
 	AofFilePath string;
 	LogLevel string; // info, debug, error
+	Password string;
 }
 
 func LoadConfig() *Config {
@@ -33,6 +34,7 @@ func LoadConfig() *Config {
 		AofEnabled: viper.GetBool("persistence.enabled"),
 		AofFilePath: viper.GetString("persistence.file_path"),
 		LogLevel: viper.GetString("logging.level"),
+		Password: viper.GetString("security.password"),
 	}
 	
 	return config;

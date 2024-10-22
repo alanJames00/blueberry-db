@@ -63,14 +63,14 @@ func main() {
 			continue
 		}
 
-		go handleConnection(conn, aof);
+		go handleConnection(conn, aof, *cfg)
 
 	}
 
 }
 
 // goroutine to handle individual connection
-func handleConnection(conn net.Conn, aof *velocitydb.Aof) {
+func handleConnection(conn net.Conn, aof *velocitydb.Aof, cfg config.Config) {
 	defer conn.Close()
 
 	for {
@@ -97,16 +97,29 @@ func handleConnection(conn net.Conn, aof *velocitydb.Aof) {
 		// debug command
 
 		writer := velocitydb.NewWriter(conn)
-	
+
+		// Handle AUTH command
+		if command == "AUTH" {
+			result := velocitydb.Auth(args, conn, cfg.Password);
+			writer.Write(result);
+			continue;
+		}
+
+		// AUTH command if password is set: non-empty password string
+		if cfg.Password != "" && !velocitydb.CheckAuth(conn) {
+			writer.Write(*velocitydb.NewValue("string", "ERR authentication required", 0, "", nil))
+			continue;
+		}
+
 		// for QUIT command, gracefully close the connection with client: early closing
 		if command == "QUIT" {
 			// debug
 			logger.Debug("command executed: QUIT")
 
 			// Send OK response before closing the connection
-			writer.Write(*velocitydb.NewValue("string", "OK", 0, "", nil))	
-			conn.Close();
-			return;
+			writer.Write(*velocitydb.NewValue("string", "OK", 0, "", nil))
+			conn.Close()
+			return
 		}
 
 		handler, ok := velocitydb.Handlers[command]
@@ -115,7 +128,7 @@ func handleConnection(conn net.Conn, aof *velocitydb.Aof) {
 			writer.Write(*velocitydb.NewValue("string", "", 0, "", nil))
 			continue
 		}
-	
+
 		// write to aof for set and hset commands
 		if command == "SET" || command == "HSET" {
 			aof.Write(value)
