@@ -7,3 +7,6 @@ file_path="./database.aof"
 
 [logging]
 level="debug"
+
+[security]
+password="nopass"
