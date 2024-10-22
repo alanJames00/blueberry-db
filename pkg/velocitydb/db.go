@@ -2,8 +2,10 @@ package velocitydb
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
+	"time"
 	"velocitydb/internal/logger"
 )
 
@@ -15,43 +17,53 @@ var Handlers = map[string]func([]Value) Value{
 	"HGET":   hget,
 	"CONFIG": config,
 	"INFO":   info,
+	"EXPIRE": expire,
 }
 
 // PING Command
 func ping(args []Value) Value {
 	if len(args) == 0 {
 		// debug
-		logger.Debug("command recieved: PING");
+		logger.Debug("command recieved: PING")
 
-		return Value{typ: "string", str: "PONG"};
+		return Value{typ: "string", str: "PONG"}
 
 	}
 
 	// debug
-	logger.Debug(fmt.Sprintf("command executed: PING %s", args[0].bulk));
+	logger.Debug(fmt.Sprintf("command executed: PING %s", args[0].bulk))
 
-	return Value{typ: "string", str: args[0].bulk};
+	return Value{typ: "string", str: args[0].bulk}
 }
 
 // SET Command
-var SETs = map[string]string{};
-var SETsMu = sync.RWMutex{};
+
+type SetValStruct struct {
+	value     string
+	expiresAt int64 // 0 -> no expiration
+}
+
+var SETs = map[string]SetValStruct{}
+var SETsMu = sync.RWMutex{}
 
 func set(args []Value) Value {
 	if len(args) != 2 {
-		return Value{typ: "error", str: "ERR wrong number of arguments for 'set' command"};
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'set' command"}
 	}
 
-	key := args[0].bulk;
-	value := args[1].bulk;
+	key := args[0].bulk
+	value := args[1].bulk
 
 	// acquire writers lock and write then Unlock
 	SETsMu.Lock()
-	SETs[key] = value
+	SETs[key] = SetValStruct{
+		value:     value,
+		expiresAt: 0, // no expiration by default
+	}
 	SETsMu.Unlock()
 
-	// debug 
-	logger.Debug(fmt.Sprintf("command executed: SET %s %s", args[0].bulk, args[1].bulk));
+	// debug
+	logger.Debug(fmt.Sprintf("command executed: SET %s %s", args[0].bulk, args[1].bulk))
 
 	return Value{typ: "string", str: "OK"}
 }
@@ -66,7 +78,7 @@ func get(args []Value) Value {
 
 	// acquire readers' lock, read and then unlock
 	SETsMu.RLock()
-	value, ok := SETs[key]
+	entry, ok := SETs[key]
 	SETsMu.RUnlock()
 
 	// check for null value
@@ -74,10 +86,56 @@ func get(args []Value) Value {
 		return Value{typ: "null"}
 	}
 
-	// debug
-	logger.Debug(fmt.Sprintf("command executed: GET %s", value));
+	// check if key is expired
+	if entry.expiresAt > 0 && time.Now().Unix() > entry.expiresAt {
+		// delete the expired key and return null
+		SETsMu.Lock()
+		delete(SETs, key)
+		SETsMu.Unlock()
 
-	return Value{typ: "bulk", bulk: value}
+		return Value{typ: "null"}
+	}
+
+	// debug
+	logger.Debug(fmt.Sprintf("command executed: GET %s", key))
+
+	return Value{typ: "bulk", bulk: entry.value}
+}
+
+// EXPIRE command: set an expire on a key
+func expire(args []Value) Value {
+	if len(args) != 2 {
+		return Value{typ: "error", str: "ERR wrong number of arguments for  'expire' command"}
+	}
+
+	key := args[0].bulk
+	secondString := args[1].bulk
+
+	seconds, err := strconv.Atoi(secondString)
+	if err != nil || seconds <= 0 {
+		return Value{typ: "error", str: "Invalid seconds argument"}
+	}
+
+	// get the current time in unix timestamp and add the seconds to get the expiresAt
+	currentTime := time.Now().Unix()
+	expiresAt := currentTime + int64(seconds)
+
+	// acquire write lock and set the expire on key
+	SETsMu.Lock()
+	entry, ok := SETs[key]
+	if ok {
+		entry.expiresAt = expiresAt
+		SETs[key] = entry
+	}
+	SETsMu.Unlock()
+
+	if !ok {
+		return Value{typ: "null"} // key does not exists
+	}
+
+	logger.Debug(fmt.Sprintf("command executed: EXPIRE %s %s", key, secondString))
+
+	return Value{typ: "string", str: "1"}
 }
 
 // HSET command
@@ -102,7 +160,7 @@ func hset(args []Value) Value {
 	HSETsMu.Unlock()
 
 	// debug
-	logger.Debug(fmt.Sprintf("command executed: HSET %s %s %s", hash, key, value));
+	logger.Debug(fmt.Sprintf("command executed: HSET %s %s %s", hash, key, value))
 
 	return Value{typ: "string", str: "OK"}
 }
@@ -127,7 +185,7 @@ func hget(args []Value) Value {
 	}
 
 	// debug
-	logger.Debug(fmt.Sprintf("command executed: HGET %s %s", hash, key));
+	logger.Debug(fmt.Sprintf("command executed: HGET %s %s", hash, key))
 
 	return Value{typ: "bulk", bulk: value}
 }
@@ -142,7 +200,7 @@ func config(args []Value) Value {
 		key := strings.ToLower(args[1].bulk)
 
 		// debug
-		logger.Debug(fmt.Sprintf("command executed: CONFIG GET %s", key));
+		logger.Debug(fmt.Sprintf("command executed: CONFIG GET %s", key))
 
 		// simulate basic config responses
 		switch key {
@@ -166,9 +224,9 @@ func config(args []Value) Value {
 			return Value{typ: "array", array: []Value{}}
 		}
 	}
-	
+
 	// debug
-	logger.Error("commmand errored: unsupported CONFIG command");
+	logger.Error("commmand errored: unsupported CONFIG command")
 
 	// config command is not recognized
 	return Value{typ: "error", str: "ERR unsupported CONFIG command"}
@@ -194,10 +252,10 @@ used_cpu_sys: 0.00
 used_cpu_user: 0.00
 # Keyspace
 db0:keys=1,expires=0,avg_ttl=0
-` 
+`
 
 	// debug
-	logger.Debug("commmand executed: INFO");
+	logger.Debug("commmand executed: INFO")
 
 	return Value{typ: "bulk", bulk: infoResponse}
 }
