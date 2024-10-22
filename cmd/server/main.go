@@ -97,6 +97,17 @@ func handleConnection(conn net.Conn, aof *velocitydb.Aof) {
 		// debug command
 
 		writer := velocitydb.NewWriter(conn)
+	
+		// for QUIT command, gracefully close the connection with client: early closing
+		if command == "QUIT" {
+			// debug
+			logger.Debug("command executed: QUIT")
+
+			// Send OK response before closing the connection
+			writer.Write(*velocitydb.NewValue("string", "OK", 0, "", nil))	
+			conn.Close();
+			return;
+		}
 
 		handler, ok := velocitydb.Handlers[command]
 		if !ok {
@@ -104,7 +115,7 @@ func handleConnection(conn net.Conn, aof *velocitydb.Aof) {
 			writer.Write(*velocitydb.NewValue("string", "", 0, "", nil))
 			continue
 		}
-
+	
 		// write to aof for set and hset commands
 		if command == "SET" || command == "HSET" {
 			aof.Write(value)
