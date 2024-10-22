@@ -1,3 +1,4 @@
 .env
 database.aof
-config.toml
+improvement_plans.md
+build
