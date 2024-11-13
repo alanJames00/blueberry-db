@@ -12,6 +12,7 @@ import (
 var Handlers = map[string]func([]Value) Value{
 	"PING":   ping,
 	"SET":    set,
+	"DEL":    deleteKeys,
 	"GET":    get,
 	"HSET":   hset,
 	"HGET":   hget,
@@ -100,6 +101,22 @@ func get(args []Value) Value {
 	logger.Debug(fmt.Sprintf("command executed: GET %s", key))
 
 	return Value{typ: "bulk", bulk: entry.value}
+}
+
+// DELETE command: delete multiple keys and values
+func deleteKeys(args []Value) Value {
+	if len(args) != 1 {
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'del' command"}
+	}
+
+	key := args[0].bulk
+
+	// acquire lock, delete the key value pair and unlock
+	SETsMu.Lock()
+	delete(SETs, key)
+	SETsMu.Unlock()
+
+	return Value{typ: "string", str: "1"}
 }
 
 // EXPIRE command: set an expire on a key
