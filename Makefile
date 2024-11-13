@@ -2,7 +2,7 @@
 TESTS_DIR=./tests
 BUILD_DIR=build
 SRC_DIR=./cmd/server
-BINARY_NAME=velocitydb
+BINARY_NAME=blueberrydb
 PID_FILE=server.pid
 
 # Composite build, run and test

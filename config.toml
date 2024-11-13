@@ -9,4 +9,4 @@ file_path="./database.aof"
 level="debug"
 
 [security]
-password="nopass"
+password=""

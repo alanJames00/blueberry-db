@@ -1,12 +1,12 @@
-package velocitydb
+package blueberrydb
 
 import (
+	"blueberrydb/internal/logger"
 	"fmt"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
-	"velocitydb/internal/logger"
 )
 
 var Handlers = map[string]func([]Value) Value{
@@ -252,7 +252,7 @@ func config(args []Value) Value {
 // INFO command: Minimal implementation
 func info(args []Value) Value {
 	infoResponse := `# Server
-redis_version: velocitydb-0.1
+redis_version: blueberrydb-0.1
 uptime_in_seconds: 12345
 uptime_in_days: 0
 # Clients

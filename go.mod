@@ -1,4 +1,4 @@
-module velocitydb
+module blueberrydb
 
 go 1.22.6
 

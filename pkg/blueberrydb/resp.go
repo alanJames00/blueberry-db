@@ -1,12 +1,12 @@
 // RESP command handler and parser
-package velocitydb
+package blueberrydb
 
 import (
 	"bufio"
 	"fmt"
 	"io"
 	"strconv"
-	"velocitydb/internal/logger"
+	"blueberrydb/internal/logger"
 )
 
 const (

@@ -6,9 +6,9 @@ import (
 	"net"
 	"os"
 	"strings"
-	"velocitydb/internal/config"
-	"velocitydb/internal/logger"
-	"velocitydb/pkg/velocitydb"
+	"blueberrydb/internal/config"
+	"blueberrydb/internal/logger"
+	"blueberrydb/pkg/blueberrydb"
 )
 
 func main() {
@@ -19,7 +19,7 @@ func main() {
 	logger.InitLogger(cfg.LogLevel)
 
 	// setup aof
-	aof, err := velocitydb.NewAof(cfg.AofFilePath)
+	aof, err := blueberrydb.NewAof(cfg.AofFilePath)
 	if err != nil {
 		logger.Error(fmt.Sprintf("Error loading aof file: %s", err.Error()))
 		return
@@ -29,11 +29,11 @@ func main() {
 	// reload previous commands from aof file
 	logger.Info(fmt.Sprintf("restoring previous database state from: %s", cfg.AofFilePath))
 
-	aof.Read(func(value velocitydb.Value) {
+	aof.Read(func(value blueberrydb.Value) {
 		command := strings.ToUpper(value.GetArray()[0].GetBulk())
 		args := value.GetArray()[1:]
 
-		handler, ok := velocitydb.Handlers[command]
+		handler, ok := blueberrydb.Handlers[command]
 		if !ok {
 			logger.Debug(fmt.Sprintf("Invalid command: %s", command))
 			return
@@ -52,7 +52,7 @@ func main() {
 	}
 	defer ln.Close()
 
-	logger.Info("velocitydb started on port" + cfg.ServerPort)
+	logger.Info("blueberrydb started on port" + cfg.ServerPort)
 
 	// accept and handle connections in loop
 
@@ -70,11 +70,11 @@ func main() {
 }
 
 // goroutine to handle individual connection
-func handleConnection(conn net.Conn, aof *velocitydb.Aof, cfg config.Config) {
+func handleConnection(conn net.Conn, aof *blueberrydb.Aof, cfg config.Config) {
 	defer conn.Close()
 
 	for {
-		resp := velocitydb.NewResp(conn)
+		resp := blueberrydb.NewResp(conn)
 		value, err := resp.Read()
 		if err != nil {
 			logger.Error(fmt.Sprintf("error reading command: %s", err.Error()))
@@ -96,18 +96,18 @@ func handleConnection(conn net.Conn, aof *velocitydb.Aof, cfg config.Config) {
 
 		// debug command
 
-		writer := velocitydb.NewWriter(conn)
+		writer := blueberrydb.NewWriter(conn)
 
 		// Handle AUTH command
 		if command == "AUTH" {
-			result := velocitydb.Auth(args, conn, cfg.Password);
+			result := blueberrydb.Auth(args, conn, cfg.Password);
 			writer.Write(result);
 			continue;
 		}
 
 		// AUTH command if password is set: non-empty password string
-		if cfg.Password != "" && !velocitydb.CheckAuth(conn) {
-			writer.Write(*velocitydb.NewValue("string", "ERR authentication required", 0, "", nil))
+		if cfg.Password != "" && !blueberrydb.CheckAuth(conn) {
+			writer.Write(*blueberrydb.NewValue("string", "ERR authentication required", 0, "", nil))
 			continue;
 		}
 
@@ -117,15 +117,15 @@ func handleConnection(conn net.Conn, aof *velocitydb.Aof, cfg config.Config) {
 			logger.Debug("command executed: QUIT")
 
 			// Send OK response before closing the connection
-			writer.Write(*velocitydb.NewValue("string", "OK", 0, "", nil))
+			writer.Write(*blueberrydb.NewValue("string", "OK", 0, "", nil))
 			conn.Close()
 			return
 		}
 
-		handler, ok := velocitydb.Handlers[command]
+		handler, ok := blueberrydb.Handlers[command]
 		if !ok {
 			logger.Error("Invalid Command: " + command)
-			writer.Write(*velocitydb.NewValue("string", "", 0, "", nil))
+			writer.Write(*blueberrydb.NewValue("string", "", 0, "", nil))
 			continue
 		}
 

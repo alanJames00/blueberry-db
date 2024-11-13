@@ -1,5 +1,5 @@
 // uses Append Only File(AOF) for persistence
-package velocitydb
+package blueberrydb 
 
 import (
 	"bufio"

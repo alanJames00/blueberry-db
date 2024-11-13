@@ -1,9 +1,9 @@
 // implements basic password auth and manages auth state of each client connection
-package velocitydb
+package blueberrydb 
 
 import (
 	"net"
-	"velocitydb/internal/logger"
+	"blueberrydb/internal/logger"
 )
 
 // map to keep track of client auth state
