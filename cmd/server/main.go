@@ -130,7 +130,7 @@ func handleConnection(conn net.Conn, aof *blueberrydb.Aof, cfg config.Config) {
 		}
 
 		// write to aof for set and hset commands
-		if command == "SET" || command == "HSET" {
+		if command == "SET" || command == "HSET" || command == "DEL" {
 			aof.Write(value)
 		}
 

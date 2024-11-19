@@ -116,6 +116,9 @@ func deleteKeys(args []Value) Value {
 	delete(SETs, key)
 	SETsMu.Unlock()
 
+	// debug
+	logger.Debug(fmt.Sprintf("command executed: DEL %s", key))
+
 	return Value{typ: "string", str: "1"}
 }
 
